@@ -28,8 +28,11 @@ public abstract class AbstractRobot extends TeamRobot
 	private int bulletHits = 0;
 	private int bulletMisses = 0;
 
-	public abstract void initialAction();
-
+	/**
+	 * Method for avoiding walls.
+	 * @param perimiter decides at which distance the robot should start turning for walls it is approaching.
+	 * @return true if the robot had to make a turn to avoid a wall, else false.
+	 */
 	public boolean turnForWall(double perimiter)
 	{
 		double distance = distanceToWall();
@@ -45,6 +48,12 @@ public abstract class AbstractRobot extends TeamRobot
 		return false;
 	}
 
+	/**
+	 * Will steer the robot towards the coordinates given as parameters.
+	 * @param x coordinate for the destination.
+	 * @param y coordinate for the destination.
+	 * @return true when position is reached.
+	 */
 	public boolean goTo(double x, double y)
 	{
 		while(distanceTo(x, y) > (getHeight()/2 + 5))
@@ -56,6 +65,11 @@ public abstract class AbstractRobot extends TeamRobot
 		return true;
 	}
 
+	/**
+	 * Sets the absolute heading. Heading will be +/- 1 from the given heading.
+	 * @param heading the new heading for the robot.
+	 * @return true when the heading is reached.
+	 */
 	public boolean setHeading(double heading)
 	{
 		while(getHeading() - heading > 1.0 || getHeading() - heading < -1.0)
@@ -63,6 +77,12 @@ public abstract class AbstractRobot extends TeamRobot
 		return true;
 	}
 
+	/**
+	 * Sets the absolute heading.
+	 * @param heading is the new heading for the robot.
+	 * @param precision sets the threshold for how much the heading is allowed to differ.
+	 * @return true when the heading is reached.
+	 */
 	public boolean setHeading(double heading, double precision)
 	{
 		while(getHeading() - heading > precision || getHeading() - heading < precision)
@@ -70,6 +90,12 @@ public abstract class AbstractRobot extends TeamRobot
 		return true;
 	}
 
+	/**
+	 * Calculates the distance from the robot to the coordinate.
+	 * @param x coordinate for the position that distance should be measured to.
+	 * @param y coordinate for the position that distance should be measured to.
+	 * @return the distance.
+	 */
 	public double distanceTo(double x, double y)
 	{
 		double deltaX = getX() - x;
@@ -150,6 +176,10 @@ public abstract class AbstractRobot extends TeamRobot
 		distanceUp = getBattleFieldHeight() - getY();
 	}
 
+	/**
+	 * Calculates the distance to the robot and the wall the robot is currently heading towards.
+	 * @return the distance between the robot and the wall.
+	 */
 	public double distanceToWall()
 	{
 		calculateDistances();
