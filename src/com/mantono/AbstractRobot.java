@@ -18,7 +18,10 @@ import robocode.TeamRobot;
 
 public abstract class AbstractRobot extends TeamRobot
 {
-	private static Map<String,List<Double>> velocityRecord = new HashMap<String,List<Double>>();
+	/**
+	 * @author Anton &Ouml;sterberg (anton.osterberg@gmail.com)
+	 */
+	private static Map<String,List<Double>> velocityRecord = new HashMap<String,List<Double>>(); //TODO replace with non-stativ version that uses sendMessage() and onMessageReceived()
 	public static final int UP = 0;
 	public static final int RIGHT = 1;
 	public static final int DOWN = 2;
@@ -345,11 +348,20 @@ public abstract class AbstractRobot extends TeamRobot
 		return angle;
 	}
 
-	public Point getCenter()
+	/**
+	 * Gives the exact center of the battlefield.
+	 * @return a <tt>Point</tt> with the coordinates corresponding to the center of the battlefield.
+	 */
+	public Point getCenterOfBattleField()
 	{
 		return new Point((int) Math.round(getBattleFieldWidth()/2), (int) Math.round(getBattleFieldHeight()/2.0));
 	}
 
+
+	/**
+	 * Finds the wall closest to the robot.
+	 * @return an int representing the wall which is closest to the robot.
+	 */
 	public int closestWall()
 	{
 		calculateDistances();
