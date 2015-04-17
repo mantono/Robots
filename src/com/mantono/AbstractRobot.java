@@ -1,6 +1,8 @@
 package com.mantono;
 
 import java.awt.Point;
+import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,6 +14,8 @@ import robocode.BulletHitEvent;
 import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
 import robocode.HitRobotEvent;
+import robocode.MessageEvent;
+import robocode.RobotDeathEvent;
 import robocode.RoundEndedEvent;
 import robocode.ScannedRobotEvent;
 import robocode.TeamRobot;
@@ -21,7 +25,7 @@ public abstract class AbstractRobot extends TeamRobot
 	/**
 	 * @author Anton &Ouml;sterberg (anton.osterberg@gmail.com)
 	 */
-	private static Map<String,List<Double>> velocityRecord = new HashMap<String,List<Double>>(); //TODO replace with non-stativ version that uses sendMessage() and onMessageReceived()
+	private Map<String,List<Double>> velocityRecord = new HashMap<String,List<Double>>(); //TODO replace with non-static version that uses sendMessage() and onMessageReceived()
 	public static final int UP = 0;
 	public static final int RIGHT = 1;
 	public static final int DOWN = 2;
@@ -101,20 +105,20 @@ public abstract class AbstractRobot extends TeamRobot
 	 */
 	public double distanceTo(double x, double y)
 	{
-		double deltaX = getX() - x;
-		double deltaY = getY() - y;
-		double pwX = Math.pow(deltaX, 2);
-		double pwY = Math.pow(deltaY, 2);
+		final double deltaX = getX() - x;
+		final double deltaY = getY() - y;
+		final double pwX = Math.pow(deltaX, 2);
+		final double pwY = Math.pow(deltaY, 2);
 		return Math.sqrt(pwX + pwY);
 	}
 
 	public double relativeBearingTo(double x, double y)
 	{
-		double deltaX = x - getX();
-		double deltaY = y - getY();
+		final double deltaX = x - getX();
+		final double deltaY = y - getY();
+		final double hypotenuse = distanceTo(x, y);
+		final double arcSin = Math.toDegrees(Math.asin(deltaX / hypotenuse));
 		double bearing = 0;
-		double hypotenuse = distanceTo(x, y);
-		double arcSin = Math.toDegrees(Math.asin(deltaX / hypotenuse));
 
 		if(deltaX > 0 && deltaY > 0)
 			bearing = arcSin;
@@ -132,11 +136,11 @@ public abstract class AbstractRobot extends TeamRobot
 
 	public double bearingTo(double x, double y)
 	{
-		double deltaX = x - getX();
-		double deltaY = y - getY();
+		final double deltaX = x - getX();
+		final double deltaY = y - getY();
+		final double hypotenuse = distanceTo(x, y);
+		final double arcSin = Math.toDegrees(Math.asin(deltaX / hypotenuse));
 		double bearing = 0;
-		double hypotenuse = distanceTo(x, y);
-		double arcSin = Math.toDegrees(Math.asin(deltaX / hypotenuse));
 
 		if(deltaX > 0 && deltaY > 0)
 			bearing = arcSin;
@@ -150,16 +154,16 @@ public abstract class AbstractRobot extends TeamRobot
 
 	public double distanceFromOrigo(double x, double y)
 	{
-		double deltaX = 0 - x;
-		double deltaY = 0 - y;
-		double pwX = Math.pow(deltaX, 2);
-		double pwY = Math.pow(deltaY, 2);
+		final double deltaX = 0 - x;
+		final double deltaY = 0 - y;
+		final double pwX = Math.pow(deltaX, 2);
+		final double pwY = Math.pow(deltaY, 2);
 		return Math.sqrt(pwX + pwY);
 	}
 
 	public boolean closestWallsIsOnLeftSide()
 	{
-		double heading = getHeading();
+		final double heading = getHeading();
 		if(heading >= 0 && heading < 110)
 			return getX() > getBattleFieldWidth() - getX();
 		else if(heading >= 70 && heading < 180)
@@ -186,7 +190,7 @@ public abstract class AbstractRobot extends TeamRobot
 	public double distanceToWall()
 	{
 		calculateDistances();
-		double heading = getHeading();
+		final double heading = getHeading();
 
 		if(heading > 0 && heading <= 90)
 			a = (distanceRight < distanceUp) ? distanceRight : distanceUp;
@@ -267,7 +271,7 @@ public abstract class AbstractRobot extends TeamRobot
 
 
 
-	public static double getAverageVelocity(String targetName)
+	public double getAverageVelocity(String targetName)
 	{
 		if(!velocityRecord.containsKey(targetName))
 			return 20;
@@ -280,22 +284,47 @@ public abstract class AbstractRobot extends TeamRobot
 		return averageVelocity/i;
 	}
 
-	public static final void updateVelocityRecord(String targetName, double targetVelocity)
+	public void updateVelocityRecord(ScannedRobotEvent robot)
 	{
-		if(!velocityRecord.containsKey(targetName))
-			velocityRecord.put(targetName, new ArrayList<Double>());
-		if(targetVelocity < 0)
-			targetVelocity *= -1;
-		List<Double> robotVelocityRecord = velocityRecord.get(targetName);
-		robotVelocityRecord.add(targetVelocity);
+		if(!velocityRecord.containsKey(robot.getName()))
+			velocityRecord.put(robot.getName(), new ArrayList<Double>());
+		List<Double> robotVelocityRecord = velocityRecord.get(robot.getName());
+		robotVelocityRecord.add(Math.abs(robot.getVelocity()));
+	}
+	
+	@Override
+	public void onMessageReceived(MessageEvent event)
+	{
+		Serializable message = event.getMessage();
+		if(message instanceof ScannedRobotEvent)
+			updateVelocityRecord((ScannedRobotEvent) message);
+	}
+	
+	@Override
+	public void onScannedRobot(ScannedRobotEvent target)
+	{
+		if(!isTeammate(target.getName()))
+		{
+			updateVelocityRecord(target);
+			try
+			{
+				broadcastMessage(target);
+			}
+			catch(IOException exception)
+			{
+				System.err.println("Could not broadcast message");
+				exception.printStackTrace();
+			}
+		}
 	}
 
-	public static final void removeDeadRobot(String robot)
+	@Override
+	public void onRobotDeath(RobotDeathEvent robot)
 	{
-		velocityRecord.remove(robot);
+		velocityRecord.remove(robot.getName());		
 	}
 
-	public static String getSlowestRobot()
+	public String getSlowestRobot()
 	{
 		String slowest = null;
 		for(String robot : velocityRecord.keySet())
@@ -308,13 +337,14 @@ public abstract class AbstractRobot extends TeamRobot
 
 	public double chanceOfHit(ScannedRobotEvent target)
 	{
-		double base = getGunHeadingRelativeTo(target)*2;
-		base *= 10/Math.pow(Math.cos(Math.toRadians(getGunHeadingRelativeTo(target))), 20*getAverageVelocity(target.getName()));
-		System.out.println(base);
-		if(base < 0)
-			base *= -1;
-		double height = target.getDistance();
-		return (10000 - (base*height)/2)/100;
+		final double distance = target.getDistance();
+		final double relativeHeading = Math.abs(target.getBearingRadians() - getGunHeadingRadians());
+		final double relativeDirection = Math.abs(target.getHeadingRadians() - getGunHeadingRadians());
+		final double speed = Math.abs(target.getVelocity());
+		
+		//TODO this can certainly be improved...
+		
+		return 10000/((distance/2 + relativeHeading*2 + relativeDirection)*speed+1);
 	}
 
 	@Override
@@ -402,7 +432,6 @@ public abstract class AbstractRobot extends TeamRobot
 	public void onBulletMissed(BulletMissedEvent event)
 	{
 		bulletMisses++;
-		System.out.println("Miss: " + getBulletStats(event.getBullet()));
 
 	}
 
@@ -410,12 +439,6 @@ public abstract class AbstractRobot extends TeamRobot
 	public void onBulletHit(BulletHitEvent event)
 	{
 		bulletHits++;
-		System.out.println("Hit: " + getBulletStats(event.getBullet()));
-	}
-
-	public String getBulletStats(Bullet bullet)
-	{
-		return "Power: " +  bullet.getPower() + " Velocity: " + bullet.getVelocity();
 	}
 
 	@Override
