@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import robocode.Bullet;
 import robocode.BulletHitEvent;
 import robocode.BulletMissedEvent;
 import robocode.DeathEvent;
@@ -25,7 +24,7 @@ public abstract class AbstractRobot extends TeamRobot
 	/**
 	 * @author Anton &Ouml;sterberg (anton.osterberg@gmail.com)
 	 */
-	private Map<String,List<Double>> velocityRecord = new HashMap<String,List<Double>>(); //TODO replace with non-static version that uses sendMessage() and onMessageReceived()
+	private final Map<String,List<Double>> velocityRecord = new HashMap<String,List<Double>>();
 	public static final int UP = 0;
 	public static final int RIGHT = 1;
 	public static final int DOWN = 2;
